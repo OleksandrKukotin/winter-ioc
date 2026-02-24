@@ -8,6 +8,7 @@ import org.github.oleksandrkukotin.service.UserService;
 public class Winter {
 
     private static final SimpleSnowflakeFactory snowflakeFactory = new  SimpleSnowflakeFactory();
+    private static final ClassLoader applicationClassLoader = Winter.class.getClassLoader();
 
     public static void main(String[] args) {
         snowflakeFactory.registerDefinition(new SnowflakeDefinition(UserService.class, "UserService"));
