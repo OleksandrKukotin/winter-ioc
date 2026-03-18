@@ -1,5 +1,7 @@
 package org.github.oleksandrkukotin.core;
 
+import org.github.oleksandrkukotin.core.annotation.Snowflake;
+
 import java.lang.reflect.Constructor;
 import java.util.Arrays;
 import java.util.Comparator;
@@ -13,6 +15,15 @@ public class SimpleSnowflakeFactory {
 
     public void registerDefinition(SnowflakeDefinition definition) {
         definitions.put(definition.getSnowflakeName(), definition);
+    }
+
+    public void scan(String packageName) {
+        SnowflakeScanner scanner = new SnowflakeScanner();
+        for (Class<?> clazz : scanner.getClasses(packageName)) {
+            Snowflake annotation = clazz.getAnnotation(Snowflake.class);
+            String name = annotation.name().isBlank() ? clazz.getSimpleName() : annotation.name();
+            registerDefinition(new SnowflakeDefinition(clazz, name, annotation.scope()));
+        }
     }
 
     public <T> T getSnowflake(String name, Class<T> type) {

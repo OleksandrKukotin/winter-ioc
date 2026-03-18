@@ -1,6 +1,8 @@
 package org.github.oleksandrkukotin.core;
 
 import io.github.classgraph.ClassGraph;
+import io.github.classgraph.ScanResult;
+import org.github.oleksandrkukotin.core.annotation.Snowflake;
 
 public class SnowflakeScanner {
 
@@ -11,7 +13,10 @@ public class SnowflakeScanner {
     }
 
     public Class<?>[] getClasses(String packageName) {
-        // to implement
-        return new Class<?>[]{};
+        try (ScanResult scanResult = classGraph.acceptPackages(packageName).scan()) {
+            return scanResult.getClassesWithAnnotation(Snowflake.class.getName())
+                    .loadClasses()
+                    .toArray(new Class<?>[0]);
+        }
     }
 }
