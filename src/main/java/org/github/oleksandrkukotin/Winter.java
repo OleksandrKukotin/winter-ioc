@@ -10,6 +10,6 @@ public class Winter {
     public static void main(String[] args) {
         snowflakeFactory.scan("org.github.oleksandrkukotin");
         UserService service = snowflakeFactory.getSnowflake("UserService", UserService.class);
-        System.out.println(service.processUserEmailService());
+        System.out.println(service.processUserMessageService());
     }
 }

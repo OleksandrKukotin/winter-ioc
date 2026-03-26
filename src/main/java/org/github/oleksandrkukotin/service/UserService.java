@@ -1,17 +1,19 @@
 package org.github.oleksandrkukotin.service;
 
+import org.github.oleksandrkukotin.core.annotation.Qualifier;
 import org.github.oleksandrkukotin.core.annotation.Snowflake;
 
 @Snowflake
 public class UserService {
 
-    private final EmailService emailService;
+    @Qualifier("SmsService")
+    private final MessageService messageService;
 
-    public UserService(EmailService emailService) {
-        this.emailService = emailService;
+    public UserService(MessageService messageService) {
+        this.messageService = messageService;
     }
 
-    public String processUserEmailService() {
-        return emailService.doSomething();
+    public String processUserMessageService() {
+        return messageService.doSomething();
     }
 }

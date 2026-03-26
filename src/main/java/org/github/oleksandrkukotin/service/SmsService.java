@@ -3,10 +3,10 @@ package org.github.oleksandrkukotin.service;
 import org.github.oleksandrkukotin.core.annotation.Snowflake;
 
 @Snowflake
-public class EmailService implements MessageService {
+public class SmsService implements MessageService {
 
     @Override
     public String doSomething(){
-        return "An email successfully sent!";
+        return "An SMS successfully sent!";
     }
 }

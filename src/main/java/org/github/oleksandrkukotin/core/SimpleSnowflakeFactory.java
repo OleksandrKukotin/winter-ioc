@@ -1,11 +1,14 @@
 package org.github.oleksandrkukotin.core;
 
+import org.github.oleksandrkukotin.core.annotation.Qualifier;
 import org.github.oleksandrkukotin.core.annotation.Snowflake;
 
+import java.lang.reflect.AnnotatedElement;
 import java.lang.reflect.Constructor;
 import java.util.Arrays;
 import java.util.Comparator;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 public class SimpleSnowflakeFactory {
@@ -66,6 +69,29 @@ public class SimpleSnowflakeFactory {
         } catch (Exception e) {
             throw new RuntimeException("Failed to instantiate " + definition.getSnowflakeClass(), e);
         }
+    }
+
+    /**
+     * Resolves a dependency by type, taking @Qualifier into account.
+     *
+     * @param requiredType the type of the dependency to resolve
+     * @param annotatedElement the field or constructor parameter that may carry @Qualifier
+     * @return the resolved dependency instance
+     */
+    private Object resolveByType(Class<?> requiredType, AnnotatedElement annotatedElement) {
+        // TODO: check if annotatedElement has @Qualifier annotation
+        //   if yes — extract its value() and delegate to getSnowflake(qualifierName, requiredType)
+
+        // TODO: find all entries in definitions whose snowflakeClass is assignable to requiredType
+        //   hint: use requiredType.isAssignableFrom(definition.getSnowflakeClass())
+
+        // TODO: if exactly one candidate found — delegate to getSnowflake(candidate.getSnowflakeName(), requiredType)
+
+        // TODO: if zero candidates found — throw IllegalArgumentException (no bean of required type)
+
+        // TODO: if more than one candidate found — throw IllegalArgumentException (ambiguous, suggest @Qualifier)
+
+        throw new UnsupportedOperationException("resolveByType not implemented yet");
     }
 
     private boolean isInSingletonCache(String snowflakeName) {
