@@ -34,7 +34,7 @@ To run a single test class:
 |---|---|---|
 | `@Snowflake` | `@Component` | Implemented |
 | `@Melt` | `@Autowired` | Defined, injection not yet wired |
-| `@Qualifier` | `@Qualifier` | Defined, TODO in factory |
+| `@Qualifier` | `@Qualifier` | Implemented (constructor params only) |
 | `@Lazy` | `@Lazy` | Defined, TODO in factory |
 
 ### Dependency Flow
@@ -58,16 +58,16 @@ These demonstrate the `@Qualifier` use case (multiple implementations of one int
 The project is organized into stages (see README.md for full detail):
 
 - **Stage 1 (complete):** `@Snowflake`, classpath scanning, constructor injection, scopes, `SnowflakeDefinition`
-- **Stage 2:** Field/setter injection (`@Melt`), `@Qualifier`, `@Lazy`, circular dependency detection
+- **Stage 2 (in progress):** Field/setter injection (`@Melt`), `@Qualifier` ✓, `@Lazy`, circular dependency detection
 - **Stage 3:** Lifecycle hooks (`@Freeze`/`@Thaw`), ordered initialization, prototype scope with injection
 - **Stage 4:** `@IceBlock` configuration classes, properties injection (`@Frost`), environment profiles
 - **Stage 5:** AOP proxies, event system, custom scopes
 
 ## Key Implementation Notes
 
-- Dependency resolution currently uses simple class name (not fully-qualified) as the key in the bean registry.
+- Dependency resolution uses simple class name (not fully-qualified) as the key in the bean registry.
 - Constructor injection picks the constructor with the **most parameters** (greedy strategy) — `@Melt` on constructors is not yet checked.
-- `resolveByType(Class<?>, AnnotatedElement)` is a stub in `SimpleSnowflakeFactory` with detailed TODO comments for implementing `@Qualifier` + assignability-based lookup.
+- `resolveByType(Class<?>, AnnotatedElement)` in `SimpleSnowflakeFactory` is fully implemented: checks `@Qualifier` on the `AnnotatedElement` first, then falls back to assignability-based scan. Throws with actionable messages on zero or multiple matches.
 - `CircularDependencyException` exists in the exception package but is not yet thrown — it will be used in Stage 2.
 - There are currently no tests; the test source directory is empty.
 - ClassGraph is the only non-test runtime dependency.

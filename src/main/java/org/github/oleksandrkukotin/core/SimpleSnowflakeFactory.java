@@ -11,24 +11,32 @@ import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.logging.Logger;
 import java.util.stream.Collectors;
 
 public class SimpleSnowflakeFactory {
+
+    private static final Logger logger = Logger.getLogger(SimpleSnowflakeFactory.class.getName());
 
     private final Map<String, SnowflakeDefinition> definitions = new HashMap<>();
     private final Map<String, Object> singletonCache = new HashMap<>();
 
     public void registerDefinition(SnowflakeDefinition definition) {
         definitions.put(definition.getSnowflakeName(), definition);
+        logger.fine(() -> "Registered snowflake definition: " + definition.getSnowflakeName() +
+                " [" + definition.getSnowflakeScope() + "]");
     }
 
     public void scan(String packageName) {
+        logger.info("Scanning package: " + packageName);
         SnowflakeScanner scanner = new SnowflakeScanner();
-        for (Class<?> clazz : scanner.getClasses(packageName)) {
+        Class<?>[] classes = scanner.getClasses(packageName);
+        for (Class<?> clazz : classes) {
             Snowflake annotation = clazz.getAnnotation(Snowflake.class);
             String name = annotation.name().isBlank() ? clazz.getSimpleName() : annotation.name();
             registerDefinition(new SnowflakeDefinition(clazz, name, annotation.scope()));
         }
+        logger.info("Scan complete. Registered " + classes.length + " snowflake(s) from package: " + packageName);
     }
 
     public <T> T getSnowflake(String name, Class<T> type) {
@@ -37,12 +45,15 @@ public class SimpleSnowflakeFactory {
             throw new  IllegalArgumentException(String.format("No definition with name '%s' was found", name));
         }
         if (foundDefinition.getSnowflakeScope().equals(Scope.SINGLETON) && isInSingletonCache(name)) {
+            logger.fine(() -> "Returning cached singleton: " + name);
             return type.cast(singletonCache.get(name));
         } else {
+            logger.fine(() -> "Creating new instance: " + name);
             T instance = createInstance(foundDefinition, type);
 
             if (foundDefinition.getSnowflakeScope().equals(Scope.SINGLETON)) {
                 singletonCache.put(name, instance);
+                logger.fine(() -> "Cached singleton: " + name);
             }
 
             return instance;
@@ -56,6 +67,8 @@ public class SimpleSnowflakeFactory {
                             .max(Comparator.comparingInt(Constructor::getParameterCount))
                             .orElseThrow(() -> new RuntimeException("No constructor found"));
             constructor.setAccessible(true);
+            logger.fine(() -> "Instantiating " + definition.getSnowflakeName() +
+                    " using constructor with " + constructor.getParameterCount() + " parameter(s)");
 
             Parameter[] parameters = constructor.getParameters();
             Object[] arguments = new Object[parameters.length];
@@ -81,6 +94,7 @@ public class SimpleSnowflakeFactory {
     private Object resolveByType(Class<?> requiredType, AnnotatedElement annotatedElement) {
         Qualifier qualifier = annotatedElement.getAnnotation(Qualifier.class);
         if (qualifier != null) {
+            logger.fine(() -> "Resolving " + requiredType.getSimpleName() + " via @Qualifier(\"" + qualifier.value() + "\")");
             return getSnowflake(qualifier.value(), requiredType);
         }
 
@@ -89,6 +103,7 @@ public class SimpleSnowflakeFactory {
                 .toList();
 
         if (candidates.size() == 1) {
+            logger.fine(() -> "Resolved " + requiredType.getSimpleName() + " by type -> " + candidates.getFirst().getSnowflakeName());
             return getSnowflake(candidates.getFirst().getSnowflakeName(), requiredType);
         } else if (candidates.isEmpty()) {
             throw new IllegalArgumentException("No snowflake found for type: " + requiredType.getName());
