@@ -5,11 +5,13 @@ import org.github.oleksandrkukotin.core.annotation.Snowflake;
 
 import java.lang.reflect.AnnotatedElement;
 import java.lang.reflect.Constructor;
+import java.lang.reflect.Parameter;
 import java.util.Arrays;
 import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 
 public class SimpleSnowflakeFactory {
 
@@ -55,13 +57,11 @@ public class SimpleSnowflakeFactory {
                             .orElseThrow(() -> new RuntimeException("No constructor found"));
             constructor.setAccessible(true);
 
-            Class<?> [] parameterTypes = constructor.getParameterTypes();
-            Object[] arguments = new Object[parameterTypes.length];
+            Parameter[] parameters = constructor.getParameters();
+            Object[] arguments = new Object[parameters.length];
 
-            for (int i = 0; i < parameterTypes.length; i++) {
-                Class<?> parameterType =  parameterTypes[i];
-                String dependencyName = parameterType.getSimpleName();
-                arguments[i] = getSnowflake(dependencyName, parameterType);
+            for (int i = 0; i < parameters.length; i++) {
+                arguments[i] = resolveByType(parameters[i].getType(), parameters[i]);
             }
 
             Object instance = constructor.newInstance(arguments);
@@ -79,19 +79,27 @@ public class SimpleSnowflakeFactory {
      * @return the resolved dependency instance
      */
     private Object resolveByType(Class<?> requiredType, AnnotatedElement annotatedElement) {
-        // TODO: check if annotatedElement has @Qualifier annotation
-        //   if yes — extract its value() and delegate to getSnowflake(qualifierName, requiredType)
+        Qualifier qualifier = annotatedElement.getAnnotation(Qualifier.class);
+        if (qualifier != null) {
+            return getSnowflake(qualifier.value(), requiredType);
+        }
 
-        // TODO: find all entries in definitions whose snowflakeClass is assignable to requiredType
-        //   hint: use requiredType.isAssignableFrom(definition.getSnowflakeClass())
+        List<SnowflakeDefinition> candidates = definitions.values().stream()
+                .filter(def -> requiredType.isAssignableFrom(def.getSnowflakeClass()))
+                .toList();
 
-        // TODO: if exactly one candidate found — delegate to getSnowflake(candidate.getSnowflakeName(), requiredType)
-
-        // TODO: if zero candidates found — throw IllegalArgumentException (no bean of required type)
-
-        // TODO: if more than one candidate found — throw IllegalArgumentException (ambiguous, suggest @Qualifier)
-
-        throw new UnsupportedOperationException("resolveByType not implemented yet");
+        if (candidates.size() == 1) {
+            return getSnowflake(candidates.getFirst().getSnowflakeName(), requiredType);
+        } else if (candidates.isEmpty()) {
+            throw new IllegalArgumentException("No snowflake found for type: " + requiredType.getName());
+        } else {
+            String names = candidates.stream()
+                    .map(SnowflakeDefinition::getSnowflakeName)
+                    .collect(Collectors.joining(", "));
+            throw new IllegalArgumentException(
+                    "Ambiguous snowflakes for type " + requiredType.getSimpleName() +
+                    ": [" + names + "]. Use @Qualifier to specify which one to inject.");
+        }
     }
 
     private boolean isInSingletonCache(String snowflakeName) {

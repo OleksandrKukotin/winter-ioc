@@ -6,10 +6,9 @@ import org.github.oleksandrkukotin.core.annotation.Snowflake;
 @Snowflake
 public class UserService {
 
-    @Qualifier("SmsService")
     private final MessageService messageService;
 
-    public UserService(MessageService messageService) {
+    public UserService(@Qualifier("EmailService") MessageService messageService) {
         this.messageService = messageService;
     }
 

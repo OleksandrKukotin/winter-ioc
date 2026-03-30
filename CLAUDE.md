@@ -1,4 +1,4 @@
-Do we n# CLAUDE.md
+# CLAUDE.md
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
@@ -12,7 +12,6 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 ./gradlew build       # Compile and package
 ./gradlew test        # Run tests (JUnit 5)
 ./gradlew clean       # Clean build artifacts
-./gradlew run         # Run the main application
 ```
 
 To run a single test class:
@@ -47,6 +46,8 @@ SimpleSnowflakeFactory
   └── resolves dependencies via constructor parameter types
 ```
 
+`Winter.java` is the demo entry point — calls `scan()` then `getSnowflake()` to wire the example service graph.
+
 ### Example Services (`org.github.oleksandrkukotin.service`)
 
 `UserService` → `MessageService` (interface) ← `EmailService` / `SmsService`
@@ -58,13 +59,15 @@ The project is organized into stages (see README.md for full detail):
 
 - **Stage 1 (complete):** `@Snowflake`, classpath scanning, constructor injection, scopes, `SnowflakeDefinition`
 - **Stage 2:** Field/setter injection (`@Melt`), `@Qualifier`, `@Lazy`, circular dependency detection
-- **Stage 3:** Lifecycle hooks (`@PostConstruct`, `@PreDestroy`), `@SnowflakeConfig`, `@Blizzard` (factory methods)
-- **Stage 4:** Properties support, environment profiles
+- **Stage 3:** Lifecycle hooks (`@Freeze`/`@Thaw`), ordered initialization, prototype scope with injection
+- **Stage 4:** `@IceBlock` configuration classes, properties injection (`@Frost`), environment profiles
 - **Stage 5:** AOP proxies, event system, custom scopes
 
 ## Key Implementation Notes
 
 - Dependency resolution currently uses simple class name (not fully-qualified) as the key in the bean registry.
+- Constructor injection picks the constructor with the **most parameters** (greedy strategy) — `@Melt` on constructors is not yet checked.
+- `resolveByType(Class<?>, AnnotatedElement)` is a stub in `SimpleSnowflakeFactory` with detailed TODO comments for implementing `@Qualifier` + assignability-based lookup.
 - `CircularDependencyException` exists in the exception package but is not yet thrown — it will be used in Stage 2.
-- `@Qualifier` and `@Lazy` handling have explicit TODO comments inside `SimpleSnowflakeFactory` marking where the logic should be added.
+- There are currently no tests; the test source directory is empty.
 - ClassGraph is the only non-test runtime dependency.
