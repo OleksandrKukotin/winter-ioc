@@ -1,10 +1,13 @@
 package org.github.oleksandrkukotin.core;
 
+import org.github.oleksandrkukotin.core.annotation.Melt;
 import org.github.oleksandrkukotin.core.annotation.Qualifier;
 import org.github.oleksandrkukotin.core.annotation.Snowflake;
 
 import java.lang.reflect.AnnotatedElement;
 import java.lang.reflect.Constructor;
+import java.lang.reflect.Field;
+import java.lang.reflect.Method;
 import java.lang.reflect.Parameter;
 import java.util.Arrays;
 import java.util.Comparator;
@@ -78,9 +81,71 @@ public class SimpleSnowflakeFactory {
             }
 
             Object instance = constructor.newInstance(arguments);
+            // Second pass: fill @Melt fields and setters that constructor injection cannot cover
+            injectMeltDependencies(instance);
             return type.cast(instance);
         } catch (Exception e) {
             throw new RuntimeException("Failed to instantiate " + definition.getSnowflakeClass(), e);
+        }
+    }
+
+    /**
+     * Performs field and setter injection on an already-constructed instance.
+     * Called immediately after constructor instantiation in {@link #createInstance}.
+     *
+     * <p>Two passes are made over the class members:
+     * <ol>
+     *   <li>Fields annotated with {@code @Melt} — dependency is resolved by the field's
+     *       declared type, then written via reflection ({@code setAccessible} is required
+     *       because fields are typically private).</li>
+     *   <li>Methods annotated with {@code @Melt} — must be single-argument setters;
+     *       the dependency is resolved by the parameter type and the method is invoked
+     *       via reflection.</li>
+     * </ol>
+     *
+     * <p>In both cases {@link #resolveByType} is called with the member itself as the
+     * {@code AnnotatedElement}, so a {@code @Qualifier} placed on the field or method
+     * is picked up automatically.
+     *
+     * @param instance the freshly created object whose injection points should be filled
+     */
+    private void injectMeltDependencies(Object instance) {
+        Class<?> clazz = instance.getClass();
+
+        // --- field injection ---
+        for (Field field : clazz.getDeclaredFields()) {
+            if (field.isAnnotationPresent(Melt.class)) {
+                // Pass the field as AnnotatedElement so @Qualifier on the field is respected
+                Object dependency = resolveByType(field.getType(), field);
+                field.setAccessible(true);
+                try {
+                    field.set(instance, dependency);
+                    logger.fine(() -> "Injected field: " + clazz.getSimpleName() + "." + field.getName());
+                } catch (IllegalAccessException e) {
+                    throw new RuntimeException("Failed to inject field: " + field.getName(), e);
+                }
+            }
+        }
+
+        // --- setter injection ---
+        for (Method method : clazz.getDeclaredMethods()) {
+            if (method.isAnnotationPresent(Melt.class)) {
+                // Setters must have exactly one parameter; anything else is a misconfiguration
+                if (method.getParameterCount() != 1) {
+                    throw new IllegalArgumentException(
+                            "@Melt setter must have exactly one parameter: " + method.getName());
+                }
+                // Pass the method as AnnotatedElement so @Qualifier on the setter is respected
+                Parameter param = method.getParameters()[0];
+                Object dependency = resolveByType(param.getType(), method);
+                method.setAccessible(true);
+                try {
+                    method.invoke(instance, dependency);
+                    logger.fine(() -> "Injected via setter: " + clazz.getSimpleName() + "." + method.getName());
+                } catch (Exception e) {
+                    throw new RuntimeException("Failed to inject via setter: " + method.getName(), e);
+                }
+            }
         }
     }
 

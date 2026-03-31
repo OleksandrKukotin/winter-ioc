@@ -25,8 +25,8 @@ A progressive list of features to implement. Each one teaches a real concept fro
 - [x] `SnowflakeDefinition` as bean metadata holder
 
 ### Stage 2 — Container Improvements
-- [ ] **Field injection** — resolve dependencies annotated with `@Melt` (like `@Autowired`) directly on fields
-- [ ] **Setter injection** — support setter methods as an injection point
+- [x] **Field injection** — resolve dependencies annotated with `@Melt` (like `@Autowired`) directly on fields
+- [x] **Setter injection** — support setter methods as an injection point
 - [x] **Qualifier support** — allow choosing between multiple implementations of the same type
 - [ ] **Circular dependency detection** — detect and report cycles instead of crashing with a stack overflow
 - [ ] **Lazy initialization** — instantiate beans only when first requested, not at scan time
