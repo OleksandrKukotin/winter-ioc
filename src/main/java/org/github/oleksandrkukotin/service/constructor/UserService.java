@@ -1,8 +1,8 @@
-package org.github.oleksandrkukotin.service;
+package org.github.oleksandrkukotin.service.constructor;
 
-import org.github.oleksandrkukotin.core.annotation.Melt;
 import org.github.oleksandrkukotin.core.annotation.Qualifier;
 import org.github.oleksandrkukotin.core.annotation.Snowflake;
+import org.github.oleksandrkukotin.service.messaging.MessageService;
 
 @Snowflake
 public class UserService {

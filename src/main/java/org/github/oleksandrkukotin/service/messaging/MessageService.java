@@ -1,4 +1,4 @@
-package org.github.oleksandrkukotin.service;
+package org.github.oleksandrkukotin.service.messaging;
 
 public interface MessageService {
 
