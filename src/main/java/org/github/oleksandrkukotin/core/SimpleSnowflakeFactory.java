@@ -4,16 +4,22 @@ import org.github.oleksandrkukotin.core.annotation.Melt;
 import org.github.oleksandrkukotin.core.annotation.Qualifier;
 import org.github.oleksandrkukotin.core.annotation.Snowflake;
 
+import org.github.oleksandrkukotin.core.exception.CircularDependencyException;
+
 import java.lang.reflect.AnnotatedElement;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 import java.lang.reflect.Parameter;
+import java.util.ArrayDeque;
 import java.util.Arrays;
 import java.util.Comparator;
+import java.util.Deque;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.logging.Logger;
 import java.util.stream.Collectors;
 
@@ -23,6 +29,8 @@ public class SimpleSnowflakeFactory {
 
     private final Map<String, SnowflakeDefinition> definitions = new HashMap<>();
     private final Map<String, Object> singletonCache = new HashMap<>();
+    private final Set<String> creationStack = new HashSet<>();
+    private final Deque<String> creationOrder = new ArrayDeque<>();
 
     public void registerDefinition(SnowflakeDefinition definition) {
         definitions.put(definition.getSnowflakeName(), definition);
@@ -64,6 +72,12 @@ public class SimpleSnowflakeFactory {
     }
 
     private <T> T createInstance(SnowflakeDefinition definition, Class<T> type) {
+        String name = definition.getSnowflakeName();
+        if (!creationStack.add(name)) {
+            String cycle = String.join(" → ", creationOrder) + " → " + name;
+            throw new CircularDependencyException("Circular dependency detected: " + cycle);
+        }
+        creationOrder.addLast(name);
         try {
             Constructor<?>[] constructors = definition.getSnowflakeClass().getDeclaredConstructors();
             Constructor<?> constructor = Arrays.stream(constructors)
@@ -84,8 +98,13 @@ public class SimpleSnowflakeFactory {
             // Second pass: fill @Melt fields and setters that constructor injection cannot cover
             injectMeltDependencies(instance);
             return type.cast(instance);
+        } catch (CircularDependencyException e) {
+            throw e;
         } catch (Exception e) {
             throw new RuntimeException("Failed to instantiate " + definition.getSnowflakeClass(), e);
+        } finally {
+            creationStack.remove(name);
+            creationOrder.removeLast();
         }
     }
 
