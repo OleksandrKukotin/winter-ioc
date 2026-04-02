@@ -50,19 +50,20 @@ SimpleSnowflakeFactory
 
 ### Example Services (`org.github.oleksandrkukotin.service`)
 
-`MessageService` (interface) ← `EmailService` / `SmsService` (both `@Snowflake`)
+Services are organized into subpackages by demo type:
 
-Three services demonstrate all three injection modes, each disambiguating `MessageService` with `@Qualifier("SmsService")`:
-- `UserService` — constructor injection
-- `FieldInjectedService` — field injection (`@Melt @Qualifier` on field)
-- `SetterInjectedService` — setter injection (`@Melt @Qualifier` on setter method)
+- `messaging/` — `MessageService` (interface) ← `EmailService` / `SmsService` (both `@Snowflake`)
+- `constructor/` — `UserService`: constructor injection, disambiguates `MessageService` with `@Qualifier("SmsService")`
+- `field/` — `FieldInjectedService`: field injection (`@Melt @Qualifier` on field)
+- `setter/` — `SetterInjectedService`: setter injection (`@Melt @Qualifier` on setter method)
+- `circular/` — `PingService` / `PongService`: mutual constructor dependency, used to demo `CircularDependencyException`
 
 ## Development Roadmap
 
 The project is organized into stages (see README.md for full detail):
 
 - **Stage 1 (complete):** `@Snowflake`, classpath scanning, constructor injection, scopes, `SnowflakeDefinition`
-- **Stage 2 (in progress):** Field/setter injection (`@Melt`) ✓, `@Qualifier` ✓, `@Lazy` (annotation defined, factory not implemented), circular dependency detection (`CircularDependencyException` exists but is not thrown)
+- **Stage 2 (in progress):** Field/setter injection (`@Melt`) ✓, `@Qualifier` ✓, circular dependency detection ✓, `@Lazy` (annotation defined, factory not implemented)
 - **Stage 3:** Lifecycle hooks (`@Freeze`/`@Thaw`), ordered initialization, prototype scope with injection
 - **Stage 4:** `@IceBlock` configuration classes, properties injection (`@Frost`), environment profiles
 - **Stage 5:** AOP proxies, event system, custom scopes
@@ -73,6 +74,6 @@ The project is organized into stages (see README.md for full detail):
 - Constructor injection picks the constructor with the **most parameters** (greedy strategy) — `@Melt` on constructors is not checked.
 - `resolveByType(Class<?>, AnnotatedElement)` handles all three injection modes: checks `@Qualifier` on the `AnnotatedElement` first (by name lookup in the registry), then falls back to assignability-based scan. Throws with actionable messages on zero or multiple matches.
 - `injectMeltDependencies()` runs after constructor injection: scans fields for `@Melt` (sets accessible, injects via reflection), then scans methods for `@Melt` (validates single-parameter setter, invokes via reflection). Both respect `@Qualifier`.
-- `CircularDependencyException` exists in the exception package but is not yet thrown — it will be used in Stage 2.
+- `CircularDependencyException` is thrown by `createInstance` when a cycle is detected. Detection uses `creationStack` (HashSet for O(1) membership) and `creationOrder` (Deque to format the cycle path in the error message).
 - There are currently no tests; the test source directory is empty.
 - ClassGraph is the only non-test runtime dependency.
