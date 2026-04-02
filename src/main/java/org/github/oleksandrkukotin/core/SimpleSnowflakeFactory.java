@@ -45,9 +45,29 @@ public class SimpleSnowflakeFactory {
         for (Class<?> clazz : classes) {
             Snowflake annotation = clazz.getAnnotation(Snowflake.class);
             String name = annotation.name().isBlank() ? clazz.getSimpleName() : annotation.name();
+            // TODO: check whether clazz carries @Lazy and pass that flag to SnowflakeDefinition
+            //   boolean lazy = /* clazz.isAnnotationPresent(???) */;
+            //   registerDefinition(new SnowflakeDefinition(clazz, name, annotation.scope(), lazy));
             registerDefinition(new SnowflakeDefinition(clazz, name, annotation.scope()));
         }
         logger.info("Scan complete. Registered " + classes.length + " snowflake(s) from package: " + packageName);
+    }
+
+    /**
+     * Eagerly instantiates all non-lazy singleton snowflakes.
+     * Call this after scan() to mimic Spring's refresh() pre-instantiation pass.
+     *
+     * Pseudo-code:
+     *   for each definition in definitions.values():
+     *       if definition.scope == SINGLETON
+     *           AND NOT definition.isLazy()
+     *           AND NOT already in singletonCache:
+     *               getSnowflake(definition.name, definition.class)
+     */
+    public void preInstantiateSingletons() {
+        // TODO: implement — iterate definitions, skip @Lazy and non-singletons,
+        //       call getSnowflake() for everything else to warm the singleton cache
+        throw new UnsupportedOperationException("preInstantiateSingletons() not yet implemented");
     }
 
     public <T> T getSnowflake(String name, Class<T> type) {
