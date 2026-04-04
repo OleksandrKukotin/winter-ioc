@@ -65,9 +65,12 @@ public class SimpleSnowflakeFactory {
      *               getSnowflake(definition.name, definition.class)
      */
     public void preInstantiateSingletons() {
-        // TODO: implement — iterate definitions, skip @Lazy and non-singletons,
-        //       call getSnowflake() for everything else to warm the singleton cache
-        throw new UnsupportedOperationException("preInstantiateSingletons() not yet implemented");
+        for (SnowflakeDefinition definition : definitions.values()) {
+            if (definition.getSnowflakeScope().equals(Scope.SINGLETON) &&
+            !definition.isLazy() && !singletonCache.containsKey(definition.getSnowflakeName())) {
+                getSnowflake(definition.getSnowflakeName(), definition.getSnowflakeClass());
+            }
+        }
     }
 
     public <T> T getSnowflake(String name, Class<T> type) {
